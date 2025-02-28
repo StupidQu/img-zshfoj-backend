@@ -226,7 +226,7 @@ async function getUserById(userId) {
 async function getUserUploads(userId) {
   try {
     // Prepare statement
-    const getUserUploads = db.prepare('SELECT * FROM uploads WHERE userId = ? ORDER BY uploadedAt DESC');
+    const getUserUploads = db.prepare('SELECT * FROM uploads WHERE userId = ? ORDER BY uploadedAt DESC LIMIT 50');
     
     // Execute query
     const uploads = getUserUploads.all(userId);

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .image-item {
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .image-item:hover::after {
+      content: "点击复制链接";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto max-w-4xl p-6">
+    <!-- 头部 -->
+    <div class="bg-white shadow rounded-lg mb-6 p-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center">
+          <span class="font-bold text-gray-700">你好，{{ username }}</span>
+        </div>
+        <a href="/logout" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm transition duration-200">注销</a>
+      </div>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg p-6">
+      <h1 class="text-2xl font-bold text-center text-gray-800 mb-8">{{ title }}</h1>
+      
+      {% if success_msg.length %}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+          {{ success_msg }}
+        </div>
+      {% endif %}
+      
+      {% if error_msg.length %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          {{ error_msg }}
+        </div>
+      {% endif %}
+      
+      <!-- 上传区域 -->
+      <div class="flex flex-col items-center mb-8">
+        <div class="w-full mb-4">
+          <input type="file" id="fileInput" class="hidden" accept="image/*">
+          <label for="fileInput" class="block w-full bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition duration-200">
+            <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span class="mt-2 block text-gray-500">点击或拖拽图片到此处上传</span>
+          </label>
+          <div id="selectedFile" class="mt-2 text-sm text-gray-600 hidden"></div>
+        </div>
+        
+        <button id="uploadBtn" class="w-full max-w-xs bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          上传图片
+        </button>
+        
+        <!-- 上传中 -->
+        <div id="loading" class="mt-4 text-center hidden">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          <p class="mt-2 text-gray-600">上传中，请稍候...</p>
+        </div>
+      </div>
+      
+      <!-- 预览区域 -->
+      <div id="previewContainer" class="mt-8 hidden">
+        <h2 class="text-xl font-semibold text-center text-gray-800 mb-4">上传成功</h2>
+        <img id="imagePreview" class="max-h-80 mx-auto rounded mb-4" src="" alt="预览图">
+        
+        <div class="bg-gray-50 p-4 rounded">
+          <div class="mb-2">
+            <span class="font-semibold text-gray-700 mr-2">图片链接:</span>
+            <span id="imageUrl" class="text-gray-600 break-all"></span>
+            <button id="copyUrlBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
+              复制
+            </button>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-700 mr-2">存储路径:</span>
+            <span id="imagePath" class="text-gray-600 break-all"></span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 上传历史 -->
+      <div class="mt-12">
+        <h2 class="text-xl font-semibold border-b pb-2 mb-4">上传历史</h2>
+        
+        {% if uploads.length > 0 %}
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {% for upload in uploads %}
+              <div class="bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 cursor-pointer image-item" data-url="{{ upload.url }}">
+                <img src="{{ upload.url }}" alt="上传图片" class="w-full h-36 object-cover">
+                <div class="p-2">
+                  <div class="text-xs text-gray-600 truncate">{{ upload.key }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ upload.date }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="bg-gray-50 text-gray-500 text-center py-8 rounded">
+            暂无上传记录
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- 提示消息 -->
+  <div id="alertPopup" class="fixed top-4 right-4 px-4 py-3 rounded text-white opacity-0 transition-opacity duration-300"></div>
+  
+  <!-- 引入外部 JavaScript -->
+  <script src="/js/upload.js"></script>
+</body>
+</html>

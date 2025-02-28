@@ -1,0 +1,274 @@
+document.addEventListener("DOMContentLoaded", function () {
+  const fileInput = document.getElementById("fileInput");
+  const selectedFile = document.getElementById("selectedFile");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const previewContainer = document.getElementById("previewContainer");
+  const imagePreview = document.getElementById("imagePreview");
+  const imageUrl = document.getElementById("imageUrl");
+  const imagePath = document.getElementById("imagePath");
+  const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const alertPopup = document.getElementById("alertPopup");
+  const loading = document.getElementById("loading");
+
+  // 文件选择处理
+  fileInput.addEventListener("change", function () {
+    // 如果选择了新文件，先隐藏之前的预览结果
+    previewContainer.classList.add("hidden");
+
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+
+      // 检查文件类型
+      if (!file.type.match("image.*")) {
+        showAlert("请选择图片文件", "error");
+        fileInput.value = "";
+        selectedFile.classList.add("hidden");
+        uploadBtn.disabled = true;
+        return;
+      }
+
+      // 检查文件大小 (限制为5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert("文件大小不能超过5MB", "error");
+        fileInput.value = "";
+        selectedFile.classList.add("hidden");
+        uploadBtn.disabled = true;
+        return;
+      }
+
+      selectedFile.textContent = `已选择: ${file.name} (${formatFileSize(
+        file.size
+      )})`;
+      selectedFile.classList.remove("hidden");
+      uploadBtn.disabled = false;
+
+      // 预览选择的图片 - 不直接在上传前显示到主预览区域
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        // 不设置imagePreview.src，仅在上传成功后显示
+      };
+      reader.readAsDataURL(file);
+    } else {
+      selectedFile.classList.add("hidden");
+      uploadBtn.disabled = true;
+    }
+  });
+
+  // 上传按钮点击事件
+  uploadBtn.addEventListener("click", uploadImage);
+
+  // 复制链接按钮点击事件
+  copyUrlBtn.addEventListener("click", function () {
+    copyToClipboard(imageUrl.textContent);
+  });
+
+  // 为历史上传的图片添加点击复制功能
+  setupHistoricalImageClickToCopy();
+
+  // 上传图片函数
+  function uploadImage() {
+    if (!fileInput.files.length) return;
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("image", file);
+
+    // 显示加载状态
+    loading.classList.remove("hidden");
+    uploadBtn.disabled = true;
+
+    fetch("/upload", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        loading.classList.add("hidden");
+
+        if (data.success) {
+          // 上传成功后才显示预览和信息
+          // 设置图片预览
+          const tempImage = new Image();
+          tempImage.onload = function () {
+            imagePreview.src = this.src;
+            // 显示上传成功结果区域
+            previewContainer.classList.remove("hidden");
+          };
+          tempImage.src = data.imageUrl;
+
+          // 设置信息
+          imageUrl.textContent = data.imageUrl;
+          imagePath.textContent = `/${data.key}`;
+          showAlert("图片上传成功", "success");
+
+          // 添加新上传的图片到历史记录而不刷新页面
+          addImageToHistory(data.imageUrl, data.key);
+          
+          // 重置文件输入框以便下次上传
+          fileInput.value = "";
+          selectedFile.classList.add("hidden");
+          uploadBtn.disabled = true;
+        } else {
+          // 显示错误信息
+          showAlert(data.message || "上传失败", "error");
+          uploadBtn.disabled = false;
+        }
+      })
+      .catch((error) => {
+        loading.classList.add("hidden");
+        uploadBtn.disabled = false;
+        showAlert("上传出错: " + error.message, "error");
+        console.error("上传错误:", error);
+      });
+  }
+
+  // 添加新上传的图片到历史记录区域
+  function addImageToHistory(imageUrl, key) {
+    const historyContainer = document.querySelector('.grid');
+    
+    // 如果有"暂无上传记录"提示，则移除它
+    const emptyState = document.querySelector('.bg-gray-50.text-gray-500.text-center.py-8.rounded');
+    if (emptyState) {
+      emptyState.remove();
+      
+      // 创建网格容器
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-2 md:grid-cols-3 gap-4';
+      document.querySelector('.mt-12').appendChild(grid);
+    }
+    
+    // 创建新图片项
+    const newImageItem = document.createElement('div');
+    newImageItem.className = 'bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item';
+    newImageItem.dataset.url = imageUrl;
+    
+    const date = new Date().toLocaleString();
+    
+    newImageItem.innerHTML = `
+      <img src="${imageUrl}" alt="上传图片" class="w-full h-36 object-cover">
+      <div class="p-2">
+        <div class="text-xs text-gray-600 truncate">${key}</div>
+        <div class="text-xs text-gray-500 mt-1">${date}</div>
+      </div>
+    `;
+    
+    // 将新图片添加到历史记录的最前面
+    const historyGrid = document.querySelector('.grid');
+    if (historyGrid) {
+      historyGrid.insertBefore(newImageItem, historyGrid.firstChild);
+      
+      // 添加点击事件
+      newImageItem.addEventListener('click', function() {
+        copyToClipboard(this.dataset.url);
+      });
+    }
+  }
+
+  // 为现有的历史图片添加点击复制功能
+  function setupHistoricalImageClickToCopy() {
+    const historyItems = document.querySelectorAll('.grid > div');
+    historyItems.forEach(item => {
+      // 从图片 src 获取 URL
+      const img = item.querySelector('img');
+      if (img) {
+        const url = img.src;
+        
+        // 存储图片 URL 作为数据属性
+        item.dataset.url = url;
+        
+        // 添加点击事件
+        item.addEventListener('click', function() {
+          copyToClipboard(this.dataset.url);
+        });
+        
+        // 添加视觉提示，表明可以点击
+        item.classList.add('cursor-pointer');
+        
+        // 添加悬停提示
+        item.title = "点击复制图片链接";
+      }
+    });
+  }
+
+  // 复制文本到剪贴板
+  function copyToClipboard(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    showAlert("链接已复制到剪贴板", "success");
+  }
+
+  // 显示提示信息
+  function showAlert(message, type) {
+    alertPopup.textContent = message;
+    alertPopup.className =
+      "fixed top-4 right-4 px-4 py-3 rounded text-white opacity-0 transition-opacity duration-300";
+
+    if (type === "success") {
+      alertPopup.classList.add("bg-green-500");
+    } else {
+      alertPopup.classList.add("bg-red-500");
+    }
+
+    // 显示消息
+    setTimeout(() => {
+      alertPopup.classList.replace("opacity-0", "opacity-100");
+    }, 10);
+
+    // 3秒后隐藏
+    setTimeout(() => {
+      alertPopup.classList.replace("opacity-100", "opacity-0");
+    }, 3000);
+  }
+
+  // 格式化文件大小
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  // 支持拖放上传
+  const fileLabel = document.querySelector('label[for="fileInput"]');
+
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    fileLabel.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    fileLabel.addEventListener(eventName, highlight, false);
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    fileLabel.addEventListener(eventName, unhighlight, false);
+  });
+
+  function highlight() {
+    fileLabel.classList.add("border-blue-500", "bg-blue-50");
+  }
+
+  function unhighlight() {
+    fileLabel.classList.remove("border-blue-500", "bg-blue-50");
+  }
+
+  fileLabel.addEventListener("drop", handleDrop, false);
+
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files.length > 0) {
+      fileInput.files = files;
+      const event = new Event("change");
+      fileInput.dispatchEvent(event);
+    }
+  }
+});

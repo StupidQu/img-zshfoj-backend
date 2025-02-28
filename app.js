@@ -140,7 +140,7 @@ app.get("/", isAuthenticated, async (req, res) => {
   if (uploadsResult.success) {
     uploads = uploadsResult.uploads.map((upload) => ({
       key: upload.key,
-      url: `${config.qiniu.domain}/${upload.key}`,
+      url: `${config.qiniu.domain}/${upload.key.split('/')[1]}`,
       date: new Date(upload.uploadedAt).toLocaleString(),
     }));
   }

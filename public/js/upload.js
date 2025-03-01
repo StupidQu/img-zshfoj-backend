@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const copyUrlBtn = document.getElementById("copyUrlBtn");
   const alertPopup = document.getElementById("alertPopup");
   const loading = document.getElementById("loading");
+  const imageMarkdown = document.getElementById("imageMarkdown");
+  const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
 
   // 文件选择处理
   fileInput.addEventListener("change", function () {
@@ -61,6 +63,11 @@ document.addEventListener("DOMContentLoaded", function () {
   copyUrlBtn.addEventListener("click", function () {
     copyToClipboard(imageUrl.textContent);
   });
+  
+  // 复制Markdown按钮点击事件
+  copyMarkdownBtn?.addEventListener("click", function () {
+    copyToClipboard(imageMarkdown.textContent);
+  });
 
   // 为历史上传的图片添加点击复制功能
   setupHistoricalImageClickToCopy();
@@ -98,7 +105,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
           // 设置信息
           imageUrl.textContent = data.imageUrl;
-          imagePath.textContent = `/${data.key}`;
+          // 隐藏存储路径
+          if (imagePath) {
+            imagePath.parentElement.classList.add("hidden");
+          }
+          
+          // 设置Markdown格式链接
+          if (imageMarkdown) {
+            const filename = data.key.split('/').pop();
+            imageMarkdown.textContent = `![${filename}](${data.imageUrl})`;
+          }
+          
           showAlert("图片上传成功", "success");
 
           // 添加新上传的图片到历史记录而不刷新页面
@@ -140,15 +157,21 @@ document.addEventListener("DOMContentLoaded", function () {
     // 创建新图片项
     const newImageItem = document.createElement('div');
     newImageItem.className = 'bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item';
+    // 存储URL作为数据属性，但不添加点击事件
     newImageItem.dataset.url = imageUrl;
     
     const date = new Date().toLocaleString();
+    const filename = key.split('/').pop();
     
     newImageItem.innerHTML = `
       <img src="${imageUrl}" alt="上传图片" class="w-full h-36 object-cover">
       <div class="p-2">
         <div class="text-xs text-gray-600 truncate">${key}</div>
         <div class="text-xs text-gray-500 mt-1">${date}</div>
+        <div class="flex mt-2 space-x-1">
+          <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
+          <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+        </div>
       </div>
     `;
     
@@ -157,9 +180,18 @@ document.addEventListener("DOMContentLoaded", function () {
     if (historyGrid) {
       historyGrid.insertBefore(newImageItem, historyGrid.firstChild);
       
-      // 添加点击事件
-      newImageItem.addEventListener('click', function() {
-        copyToClipboard(this.dataset.url);
+      // 添加按钮点击事件
+      const copyUrlBtn = newImageItem.querySelector('.copy-url-btn');
+      const copyMdBtn = newImageItem.querySelector('.copy-md-btn');
+      
+      copyUrlBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        copyToClipboard(imageUrl);
+      });
+      
+      copyMdBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        copyToClipboard(`![${filename}](${imageUrl})`);
       });
     }
   }
@@ -172,20 +204,50 @@ document.addEventListener("DOMContentLoaded", function () {
       const img = item.querySelector('img');
       if (img) {
         const url = img.src;
+        const key = item.querySelector('.text-gray-600.truncate')?.textContent || '';
+        const filename = key.split('/').pop();
         
-        // 存储图片 URL 作为数据属性
+        // 存储图片 URL 作为数据属性，但不添加点击事件
         item.dataset.url = url;
         
-        // 添加点击事件
-        item.addEventListener('click', function() {
-          copyToClipboard(this.dataset.url);
-        });
+        // 确保没有cursor-pointer类
+        item.classList.remove('cursor-pointer');
         
-        // 添加视觉提示，表明可以点击
-        item.classList.add('cursor-pointer');
+        // 移除title属性
+        item.removeAttribute('title');
         
-        // 添加悬停提示
-        item.title = "点击复制图片链接";
+        // 添加按钮容器（如果不存在）
+        if (!item.querySelector('.copy-url-btn')) {
+          const buttonContainer = document.createElement('div');
+          buttonContainer.className = 'flex mt-2 space-x-1';
+          buttonContainer.innerHTML = `
+            <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
+            <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+          `;
+          
+          const infoContainer = item.querySelector('.p-2');
+          if (infoContainer) {
+            infoContainer.appendChild(buttonContainer);
+          }
+        }
+        
+        // 添加按钮点击事件
+        const copyUrlBtn = item.querySelector('.copy-url-btn');
+        const copyMdBtn = item.querySelector('.copy-md-btn');
+        
+        if (copyUrlBtn) {
+          copyUrlBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            copyToClipboard(url);
+          });
+        }
+        
+        if (copyMdBtn) {
+          copyMdBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            copyToClipboard(`![${filename}](${url})`);
+          });
+        }
       }
     });
   }

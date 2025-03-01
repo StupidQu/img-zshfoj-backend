@@ -10,24 +10,10 @@
       position: relative;
       transition: all 0.2s ease;
     }
-    .image-item:hover::after {
-      content: "点击复制链接";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.875rem;
-    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-  <div class="container mx-auto max-w-4xl p-6">
+  <div class="mx-auto max-w-4xl p-6 container">
     <!-- 头部 -->
     <div class="bg-white shadow rounded-lg mb-6 p-4">
       <div class="flex justify-between items-center">
@@ -90,7 +76,14 @@
               复制
             </button>
           </div>
-          <div>
+          <div class="mb-2">
+            <span class="font-semibold text-gray-700 mr-2">Markdown:</span>
+            <span id="imageMarkdown" class="text-gray-600 break-all"></span>
+            <button id="copyMarkdownBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
+              复制
+            </button>
+          </div>
+          <div class="hidden">
             <span class="font-semibold text-gray-700 mr-2">存储路径:</span>
             <span id="imagePath" class="text-gray-600 break-all"></span>
           </div>
@@ -104,11 +97,15 @@
         {% if uploads.length > 0 %}
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             {% for upload in uploads %}
-              <div class="bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 cursor-pointer image-item" data-url="{{ upload.url }}">
+              <div class="bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item" data-url="{{ upload.url }}">
                 <img src="{{ upload.url }}" alt="上传图片" class="w-full h-36 object-cover">
                 <div class="p-2">
                   <div class="text-xs text-gray-600 truncate">{{ upload.key }}</div>
                   <div class="text-xs text-gray-500 mt-1">{{ upload.date }}</div>
+                  <div class="flex mt-2 space-x-1">
+                    <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
+                    <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+                  </div>
                 </div>
               </div>
             {% endfor %}

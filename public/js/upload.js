@@ -71,6 +71,55 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 为历史上传的图片添加点击复制功能
   setupHistoricalImageClickToCopy();
+  
+  // 添加粘贴上传功能
+  document.addEventListener("paste", handlePaste);
+  
+  // 处理粘贴事件
+  function handlePaste(e) {
+    // 防止默认行为
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 获取剪贴板数据
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const items = clipboardData.items;
+    
+    let imageFile = null;
+    
+    // 遍历剪贴板项目，查找图片
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          imageFile = items[i].getAsFile();
+          break;
+        }
+      }
+    }
+    
+    // 如果找到图片，处理上传
+    if (imageFile) {
+      // 显示正在处理的提示
+      showAlert("检测到图片，正在上传...", "success");
+      
+      // 创建一个新的 FileList 对象（通过 DataTransfer）
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(imageFile);
+      
+      // 设置文件输入的文件
+      fileInput.files = dataTransfer.files;
+      
+      // 显示选择的文件信息
+      selectedFile.textContent = `已选择: 粘贴的图片 (${formatFileSize(imageFile.size)})`;
+      selectedFile.classList.remove("hidden");
+      
+      // 启用上传按钮
+      uploadBtn.disabled = false;
+      
+      // 自动上传
+      uploadImage();
+    }
+  }
 
   // 上传图片函数
   function uploadImage() {

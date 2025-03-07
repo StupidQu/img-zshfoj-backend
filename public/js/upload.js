@@ -5,12 +5,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const previewContainer = document.getElementById("previewContainer");
   const imagePreview = document.getElementById("imagePreview");
   const imageUrl = document.getElementById("imageUrl");
+  const shortUrl = document.getElementById("shortUrl");
   const imagePath = document.getElementById("imagePath");
   const copyUrlBtn = document.getElementById("copyUrlBtn");
+  const copyShortUrlBtn = document.getElementById("copyShortUrlBtn");
   const alertPopup = document.getElementById("alertPopup");
   const loading = document.getElementById("loading");
   const imageMarkdown = document.getElementById("imageMarkdown");
+  const shortMarkdown = document.getElementById("shortMarkdown");
   const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+  const copyShortMarkdownBtn = document.getElementById("copyShortMarkdownBtn");
 
   // 文件选择处理
   fileInput.addEventListener("change", function () {
@@ -64,9 +68,19 @@ document.addEventListener("DOMContentLoaded", function () {
     copyToClipboard(imageUrl.textContent);
   });
   
+  // 复制短链接按钮点击事件
+  copyShortUrlBtn?.addEventListener("click", function () {
+    copyToClipboard(shortUrl.textContent);
+  });
+  
   // 复制Markdown按钮点击事件
   copyMarkdownBtn?.addEventListener("click", function () {
     copyToClipboard(imageMarkdown.textContent);
+  });
+  
+  // 复制短链Markdown按钮点击事件
+  copyShortMarkdownBtn?.addEventListener("click", function () {
+    copyToClipboard(shortMarkdown.textContent);
   });
 
   // 为历史上传的图片添加点击复制功能
@@ -154,6 +168,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
           // 设置信息
           imageUrl.textContent = data.imageUrl;
+          shortUrl.textContent = data.shortUrl || "";
+          
           // 隐藏存储路径
           if (imagePath) {
             imagePath.parentElement.classList.add("hidden");
@@ -165,10 +181,16 @@ document.addEventListener("DOMContentLoaded", function () {
             imageMarkdown.textContent = `![${filename}](${data.imageUrl})`;
           }
           
+          // 设置短链接Markdown格式
+          if (shortMarkdown && data.shortUrl) {
+            const filename = data.key.split('/').pop();
+            shortMarkdown.textContent = `![image](${data.shortUrl})`;
+          }
+          
           showAlert("图片上传成功", "success");
 
           // 添加新上传的图片到历史记录而不刷新页面
-          addImageToHistory(data.imageUrl, data.key);
+          addImageToHistory(data.imageUrl, data.key, data.shortUrl);
           
           // 重置文件输入框以便下次上传
           fileInput.value = "";
@@ -189,7 +211,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // 添加新上传的图片到历史记录区域
-  function addImageToHistory(imageUrl, key) {
+  function addImageToHistory(imageUrl, key, shortUrl) {
     const historyContainer = document.querySelector('.grid');
     
     // 如果有"暂无上传记录"提示，则移除它
@@ -206,8 +228,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // 创建新图片项
     const newImageItem = document.createElement('div');
     newImageItem.className = 'bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item';
-    // 存储URL作为数据属性，但不添加点击事件
+    // 存储URL作为数据属性
     newImageItem.dataset.url = imageUrl;
+    newImageItem.dataset.shortUrl = shortUrl || '';
     
     const date = new Date().toLocaleString();
     const filename = key.split('/').pop();
@@ -219,7 +242,11 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="text-xs text-gray-500 mt-1">${date}</div>
         <div class="flex mt-2 space-x-1">
           <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
-          <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+          <button class="copy-short-url-btn bg-purple-500 hover:bg-purple-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短链</button>
+        </div>
+        <div class="flex mt-1 space-x-1">
+          <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制MD</button>
+          <button class="copy-short-md-btn bg-indigo-500 hover:bg-indigo-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短MD</button>
         </div>
       </div>
     `;
@@ -230,17 +257,53 @@ document.addEventListener("DOMContentLoaded", function () {
       historyGrid.insertBefore(newImageItem, historyGrid.firstChild);
       
       // 添加按钮点击事件
-      const copyUrlBtn = newImageItem.querySelector('.copy-url-btn');
-      const copyMdBtn = newImageItem.querySelector('.copy-md-btn');
-      
+      setupItemButtons(newImageItem, imageUrl, shortUrl, filename);
+    }
+  }
+
+  // 为图片项设置按钮点击事件
+  function setupItemButtons(item, url, shortUrl, filename) {
+    const copyUrlBtn = item.querySelector('.copy-url-btn');
+    const copyShortUrlBtn = item.querySelector('.copy-short-url-btn');
+    const copyMdBtn = item.querySelector('.copy-md-btn');
+    const copyShortMdBtn = item.querySelector('.copy-short-md-btn');
+    
+    // 如果没有传入filename，尝试从key中获取
+    if (!filename) {
+      const keyElement = item.querySelector('.text-gray-600.truncate');
+      if (keyElement) {
+        const key = keyElement.textContent;
+        filename = key.split('/').pop();
+      } else {
+        filename = 'image';
+      }
+    }
+    
+    if (copyUrlBtn) {
       copyUrlBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        copyToClipboard(imageUrl);
+        copyToClipboard(url);
       });
-      
+    }
+    
+    if (copyShortUrlBtn && shortUrl) {
+      copyShortUrlBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        copyToClipboard(shortUrl);
+      });
+    }
+    
+    if (copyMdBtn) {
       copyMdBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        copyToClipboard(`![${filename}](${imageUrl})`);
+        copyToClipboard(`![${filename}](${url})`);
+      });
+    }
+    
+    if (copyShortMdBtn && shortUrl) {
+      copyShortMdBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        copyToClipboard(`![${filename}](${shortUrl})`);
       });
     }
   }
@@ -249,67 +312,71 @@ document.addEventListener("DOMContentLoaded", function () {
   function setupHistoricalImageClickToCopy() {
     const historyItems = document.querySelectorAll('.grid > div');
     historyItems.forEach(item => {
-      // 从图片 src 获取 URL
-      const img = item.querySelector('img');
-      if (img) {
-        const url = img.src;
-        const key = item.querySelector('.text-gray-600.truncate')?.textContent || '';
-        const filename = key.split('/').pop();
-        
-        // 存储图片 URL 作为数据属性，但不添加点击事件
-        item.dataset.url = url;
-        
-        // 确保没有cursor-pointer类
-        item.classList.remove('cursor-pointer');
-        
-        // 移除title属性
-        item.removeAttribute('title');
-        
-        // 添加按钮容器（如果不存在）
-        if (!item.querySelector('.copy-url-btn')) {
-          const buttonContainer = document.createElement('div');
-          buttonContainer.className = 'flex mt-2 space-x-1';
-          buttonContainer.innerHTML = `
+      // 获取URL和短链接
+      const url = item.dataset.url;
+      const shortUrl = item.dataset.shortUrl;
+      
+      // 获取文件名
+      const keyElement = item.querySelector('.text-gray-600.truncate');
+      let filename = 'image';
+      if (keyElement) {
+        const key = keyElement.textContent;
+        filename = key.split('/').pop();
+      }
+      
+      // 确保没有cursor-pointer类
+      item.classList.remove('cursor-pointer');
+      
+      // 移除title属性
+      item.removeAttribute('title');
+      
+      // 如果按钮容器不完整，重新创建
+      if (!item.querySelector('.copy-short-url-btn')) {
+        const infoContainer = item.querySelector('.p-2');
+        if (infoContainer) {
+          // 清除旧的按钮（如果有）
+          const oldButtons = infoContainer.querySelectorAll('.flex');
+          oldButtons.forEach(btn => btn.remove());
+          
+          // 创建新的按钮组
+          const buttonRow1 = document.createElement('div');
+          buttonRow1.className = 'flex mt-2 space-x-1';
+          buttonRow1.innerHTML = `
             <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
-            <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+            <button class="copy-short-url-btn bg-purple-500 hover:bg-purple-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短链</button>
           `;
           
-          const infoContainer = item.querySelector('.p-2');
-          if (infoContainer) {
-            infoContainer.appendChild(buttonContainer);
-          }
-        }
-        
-        // 添加按钮点击事件
-        const copyUrlBtn = item.querySelector('.copy-url-btn');
-        const copyMdBtn = item.querySelector('.copy-md-btn');
-        
-        if (copyUrlBtn) {
-          copyUrlBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            copyToClipboard(url);
-          });
-        }
-        
-        if (copyMdBtn) {
-          copyMdBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            copyToClipboard(`![${filename}](${url})`);
-          });
+          const buttonRow2 = document.createElement('div');
+          buttonRow2.className = 'flex mt-1 space-x-1';
+          buttonRow2.innerHTML = `
+            <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制MD</button>
+            <button class="copy-short-md-btn bg-indigo-500 hover:bg-indigo-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短MD</button>
+          `;
+          
+          infoContainer.appendChild(buttonRow1);
+          infoContainer.appendChild(buttonRow2);
         }
       }
+      
+      // 设置按钮事件
+      setupItemButtons(item, url, shortUrl, filename);
     });
   }
 
   // 复制文本到剪贴板
   function copyToClipboard(text) {
+    if (!text) {
+      showAlert("没有可复制的内容", "error");
+      return;
+    }
+    
     const textarea = document.createElement("textarea");
     textarea.value = text;
     document.body.appendChild(textarea);
     textarea.select();
     document.execCommand("copy");
     document.body.removeChild(textarea);
-    showAlert("链接已复制到剪贴板", "success");
+    showAlert("已复制到剪贴板", "success");
   }
 
   // 显示提示信息

@@ -70,7 +70,7 @@
         <img id="imagePreview" class="max-h-80 mx-auto rounded mb-4" src="" alt="预览图">
         
         <div class="bg-gray-50 p-4 rounded">
-          <div class="mb-2">
+          <div class="mb-2 hidden">
             <span class="font-semibold text-gray-700 mr-2">图片链接:</span>
             <span id="imageUrl" class="text-gray-600 break-all"></span>
             <button id="copyUrlBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
@@ -78,9 +78,23 @@
             </button>
           </div>
           <div class="mb-2">
+            <span class="font-semibold text-gray-700 mr-2">短链接:</span>
+            <span id="shortUrl" class="text-gray-600 break-all"></span>
+            <button id="copyShortUrlBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
+              复制
+            </button>
+          </div>
+          <div class="mb-2 hidden">
             <span class="font-semibold text-gray-700 mr-2">Markdown:</span>
             <span id="imageMarkdown" class="text-gray-600 break-all"></span>
             <button id="copyMarkdownBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
+              复制
+            </button>
+          </div>
+          <div class="mb-2">
+            <span class="font-semibold text-gray-700 mr-2">短链Markdown:</span>
+            <span id="shortMarkdown" class="text-gray-600 break-all"></span>
+            <button id="copyShortMarkdownBtn" class="ml-2 bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 px-2 rounded transition duration-200">
               复制
             </button>
           </div>
@@ -98,14 +112,20 @@
         {% if uploads.length > 0 %}
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             {% for upload in uploads %}
-              <div class="bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item" data-url="{{ upload.url }}">
+              <div class="bg-white border rounded overflow-hidden shadow-sm hover:shadow-md transition duration-200 transform hover:-translate-y-1 image-item" 
+                   data-url="{{ upload.url }}" 
+                   data-short-url="{{ upload.shortUrl }}">
                 <img src="{{ upload.url }}" alt="上传图片" class="w-full h-36 object-cover">
                 <div class="p-2">
                   <div class="text-xs text-gray-600 truncate">{{ upload.key }}</div>
                   <div class="text-xs text-gray-500 mt-1">{{ upload.date }}</div>
                   <div class="flex mt-2 space-x-1">
                     <button class="copy-url-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制链接</button>
-                    <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制Markdown</button>
+                    <button class="copy-short-url-btn bg-purple-500 hover:bg-purple-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短链</button>
+                  </div>
+                  <div class="flex mt-1 space-x-1">
+                    <button class="copy-md-btn bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制MD</button>
+                    <button class="copy-short-md-btn bg-indigo-500 hover:bg-indigo-600 text-white text-xs py-1 px-2 rounded transition duration-200 flex-1">复制短MD</button>
                   </div>
                 </div>
               </div>

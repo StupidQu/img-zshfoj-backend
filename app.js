@@ -8,6 +8,7 @@ import qiniu from "qiniu";
 import bodyParser from "body-parser";
 import session from "express-session";
 import flash from "connect-flash";
+import { nanoid } from "nanoid";
 import config from "./config.js";
 import {
   initializeDB,
@@ -17,6 +18,7 @@ import {
   getUserById,
   getUserUploads,
   isAuthenticated,
+  getUploadByShortId,
 } from "./auth.js";
 
 // Get current directory path
@@ -102,6 +104,11 @@ function getClientIp(req) {
   );
 }
 
+// Generate a short ID for image access using nanoid
+function generateShortId() {
+  return nanoid();
+}
+
 // Check if file exists in Qiniu cloud storage
 async function fileExistsInQiniu(key) {
   try {
@@ -141,6 +148,7 @@ app.get("/", isAuthenticated, async (req, res) => {
     uploads = uploadsResult.uploads.map((upload) => ({
       key: upload.key,
       url: `${config.qiniu.domain}/${upload.key.split('/')[1]}`,
+      shortUrl: `${req.protocol}://${req.get('host')}/i/${upload.shortId}`,
       date: new Date(upload.uploadedAt).toLocaleString(),
     }));
   }
@@ -150,6 +158,28 @@ app.get("/", isAuthenticated, async (req, res) => {
     username: req.session.user.username,
     uploads: uploads,
   });
+});
+
+// Short URL redirect for images
+app.get("/i/:shortId", async (req, res) => {
+  const { shortId } = req.params;
+  
+  // Get upload by short ID
+  const result = await getUploadByShortId(shortId);
+  
+  if (result.success) {
+    // Extract the image key (second part of the path)
+    const imageKey = result.upload.key.split('/')[1];
+    
+    // Redirect to the actual image URL
+    res.redirect(`${config.qiniu.domain}/${imageKey}`);
+  } else {
+    // Image not found
+    res.status(404).render("error.njk", {
+      title: "图片未找到",
+      message: "请求的图片不存在或已被删除"
+    });
+  }
 });
 
 // Login page
@@ -281,6 +311,9 @@ app.post(
         .digest("hex");
       const key = `${sha256Hash}.png`;
       
+      // Generate a unique short ID for this upload
+      const shortId = generateShortId();
+      
       // Check if file already exists in Qiniu
       const fileExists = await fileExistsInQiniu(key);
       
@@ -290,14 +323,25 @@ app.post(
         // Build access URL for existing file
         const imageUrl = `${config.qiniu.domain}/${key}`;
         
-        // Record the upload information in our database
+        // Record the upload information in our database (with short ID)
         const ip = getClientIp(req);
-        await recordUpload(req.session.userId, key, ip);
+        const uploadResult = await recordUpload(req.session.userId, key, ip, shortId);
+        
+        if (!uploadResult.success) {
+          return res.status(500).json({
+            success: false,
+            message: "Failed to record upload"
+          });
+        }
+        
+        // Build the short URL
+        const shortUrl = `${req.protocol}://${req.get('host')}/i/${shortId}`;
         
         // Return the existing file info
         return res.json({
           success: true,
           imageUrl,
+          shortUrl,
           key,
           message: "File already exists and has been linked to your account"
         });
@@ -336,14 +380,25 @@ app.post(
       // Build access URL
       const imageUrl = `${config.qiniu.domain}/${key}`;
 
-      // Record upload information
+      // Record upload information with the short ID
       const ip = getClientIp(req);
-      await recordUpload(req.session.userId, key, ip);
+      const recordResult = await recordUpload(req.session.userId, key, ip, shortId);
+      
+      if (!recordResult.success) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to record upload"
+        });
+      }
+      
+      // Build the short URL
+      const shortUrl = `${req.protocol}://${req.get('host')}/i/${shortId}`;
 
       // Return upload success information
       return res.json({
         success: true,
         imageUrl,
+        shortUrl,
         key,
       });
     } catch (error) {
